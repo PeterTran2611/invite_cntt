@@ -342,7 +342,7 @@
 </div>
 
 <script>
-window.APP_CONFIG = {"site":{"name":"Họp lớp","description":"Thư mời họp lớp và ảnh kỷ niệm","lang":"vi"},"sheets":[],"skipped":[],"requiredColumns":[],"app":{"appsScriptUrl":"https://script.google.com/macros/s/AKfycbwaNi4aFj3gOtca178aPZQW20yyOU22BXjvtQBHLFo8WQ2oWLfD0dTKEmnthrd71bYV/exec"},"builtAt":"2026-10-21T17:12:11.151Z"};
+window.APP_CONFIG = {"site":{"name":"Họp lớp","description":"Thư mời họp lớp và ảnh kỷ niệm","lang":"vi"},"sheets":[],"skipped":[],"requiredColumns":[],"app":{"appsScriptUrl":"https://script.google.com/macros/s/AKfycbwaNi4aFj3gOtca178aPZQW20yyOU22BXjvtQBHLFo8WQ2oWLfD0dTKEmnthrd71bYV/exec"},"builtAt":"2026-10-21T17:20:17.958Z"};
 // Web họp lớp: đăng ký tham gia (ghi Google Sheet) + ảnh kỷ niệm (Google Drive), cả hai qua Google Apps Script.
 // Cấu hình (APP_CONFIG.app.appsScriptUrl) được chèn khi build. Dữ liệu KHÔNG nằm trong file: mỗi lần mở, tải mới.
 // Giao diện giữ giống preview/mockup.html — sửa giao diện ở mockup trước rồi chép sang đây.
@@ -573,6 +573,9 @@ function callScript(params) {
     const timer = setTimeout(() => { done(); reject(new Error("Máy chủ không phản hồi. Kiểm tra mạng internet rồi thử lại.")); }, 25000);
     window[cb] = data => { done(); if (data && data.ok) resolve(data); else reject(new Error((data && data.error) || "Máy chủ báo lỗi.")); };
     s.onerror = () => { done(); reject(new Error("Không kết nối được máy chủ. Kiểm tra mạng internet rồi thử lại.")); };
+    // Không gửi kèm phiên đăng nhập Google (cookie): trình duyệt đăng nhập (nhất là nhiều tài khoản) làm Apps Script
+    // chuyển hướng sai → thẻ <script> lỗi. Apps Script trả Access-Control-Allow-Origin: * nên chế độ anonymous đọc được.
+    s.crossOrigin = "anonymous";
     s.src = url + "?" + new URLSearchParams({ ...params, callback: cb, _: Date.now() });  // _ để luôn lấy bản mới nhất
     document.head.append(s);
   });
