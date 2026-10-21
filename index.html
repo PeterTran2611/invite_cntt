@@ -91,6 +91,11 @@
   .hero-box .t2 { white-space: nowrap; line-height: 1.4; font-size: min(28px, calc((100vw - 60px) / 21)); font-size: min(34px, calc(100cqi / 21)); }
   @media (max-width: 419px) { .hero-box { padding-left: 14px; padding-right: 14px; } }
   .hero-box p { margin: 0; font-size: 15px; opacity: .9; max-width: 52ch; }
+  /* Số người đã đăng ký (chỉ con số) — ở hộp chào và trên form */
+  .reg-count { margin: 4px 0 0; padding: 4px 14px; font-size: 15px; line-height: 1.6; border: 1px solid currentColor; }
+  .reg-count b { font-family: "Times New Roman", "Tinos", Times, serif; font-size: 22px; line-height: 1.35; }
+  .hero-box .reg-count { opacity: 1; border-color: rgba(255,255,255,.3); }
+  .rsvp .reg-count { display: inline-block; margin: 0 0 16px; color: var(--heading); border-color: var(--tag); background: var(--surface); }
   .btn-ghost { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 18px; margin-top: 6px;
     background: var(--ghost); color: var(--ghost-text); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 
@@ -230,6 +235,7 @@
         <div class="hero-box">
           <h1 class="script" id="t-title"><span class="t1">GẶP MẶT HỘI CỰU SINH VIÊN KHOA CÔNG NGHỆ THÔNG TIN</span> <span class="t2">TRƯỜNG ĐẠI HỌC HÀNG HẢI VIỆT NAM</span></h1>
           <p>Mỗi năm, ban cán sự sẽ cố gắng tổ chức một buổi để mọi người trong khoa tụ tập, gặp gỡ, mong mọi người có thể sắp xếp thời gian tham gia</p>
+          <p class="reg-count hidden" aria-live="polite"></p>
           <a class="btn-ghost" href="#register">Xác nhận tham gia</a>
         </div>
       </div>
@@ -263,6 +269,7 @@
       <div class="rsvp" data-reveal>
         <h2 class="script" id="r-title">Xác nhận tham gia</h2>
         <p class="lead">Điền thông tin để lớp biết bạn sẽ đến nhé.</p>
+        <p class="reg-count hidden"></p>
         <form class="form" id="form" novalidate>
           <div class="field">
             <label for="f-name">Họ và tên <span class="req">*</span></label>
@@ -342,7 +349,7 @@
 </div>
 
 <script>
-window.APP_CONFIG = {"site":{"name":"Họp lớp","description":"Thư mời họp lớp và ảnh kỷ niệm","lang":"vi"},"sheets":[],"skipped":[],"requiredColumns":[],"app":{"appsScriptUrl":"https://script.google.com/macros/s/AKfycbwaNi4aFj3gOtca178aPZQW20yyOU22BXjvtQBHLFo8WQ2oWLfD0dTKEmnthrd71bYV/exec"},"builtAt":"2026-10-21T17:24:33.069Z"};
+window.APP_CONFIG = {"site":{"name":"Họp lớp","description":"Thư mời họp lớp và ảnh kỷ niệm","lang":"vi"},"sheets":[],"skipped":[],"requiredColumns":[],"app":{"appsScriptUrl":"https://script.google.com/macros/s/AKfycbwfr9kehqAPIOh6Np3mmruKXPK6gSVNVDDxRdojo4now0xcazbraRD1UqO-Ed-54EDU/exec"},"builtAt":"2026-10-21T17:32:02.594Z"};
 // Web họp lớp: đăng ký tham gia (ghi Google Sheet) + ảnh kỷ niệm (Google Drive), cả hai qua Google Apps Script.
 // Cấu hình (APP_CONFIG.app.appsScriptUrl) được chèn khi build. Dữ liệu KHÔNG nằm trong file: mỗi lần mở, tải mới.
 // Giao diện giữ giống preview/mockup.html — sửa giao diện ở mockup trước rồi chép sang đây.
@@ -369,7 +376,7 @@ function submitForm() {
   const btn = $("f-submit");
   btn.disabled = true; btn.textContent = "Đang gửi…";
   sendRegistration({ name, class: cls, phone })
-    .then(() => showDone(name))
+    .then(() => { showDone(name); loadRegCount(); })
     .catch(e => setMsg(e.message + " Thông tin bạn nhập vẫn còn, hãy bấm gửi lại."))
     .finally(() => { btn.disabled = false; btn.textContent = "Xác nhận tham gia"; });
 }
@@ -378,6 +385,18 @@ function showDone(name) {
   $("form").classList.add("hidden");
   $("done-text").textContent = `Cảm ơn ${name}. Hẹn gặp bạn lúc 19:00 ngày 31/10/2026 tại Trạm Bia!`;
   $("done").classList.remove("hidden");
+}
+
+// ===== Số người đã đăng ký (máy chủ chỉ trả con số; lỗi thì để ẩn — không ảnh hưởng phần khác) =====
+function setRegCount(n) {
+  document.querySelectorAll(".reg-count").forEach(p => {
+    if (n > 0) p.replaceChildren("Đã có ", el("b", null, String(n)), " người xác nhận tham gia");
+    else p.textContent = "Hãy là người đầu tiên xác nhận tham gia!";
+    p.classList.remove("hidden");
+  });
+}
+async function loadRegCount() {
+  try { const r = await fetchRegCount(); if (typeof r.count === "number") setRegCount(r.count); } catch (e) {}
 }
 
 function resetForm() {
@@ -582,6 +601,7 @@ function callScript(params) {
 }
 const sendRegistration = data => callScript({ action: "register", ...data });
 const fetchAlbums = () => callScript({ action: "photos" });
+const fetchRegCount = () => callScript({ action: "count" });  // chỉ trả con số; Apps Script bản cũ trả lỗi → web để ẩn
 
 // Ảnh quá lớn cho JSONP (đường dẫn URL) → gửi bằng fetch POST, thân là chuỗi JSON kiểu text/plain (không cần preflight CORS)
 async function uploadPhoto(p) {
@@ -620,6 +640,7 @@ document.addEventListener("keydown", e => {
 });
 document.querySelectorAll("[data-reveal]").forEach(reveal);
 document.querySelectorAll(".tile").forEach(tilt);
+loadRegCount();
 $("build-info").textContent = CFG.builtAt ? "Bản build " + new Date(CFG.builtAt).toLocaleString() : "";
 loadAlbums();
 
